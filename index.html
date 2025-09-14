@@ -2,14 +2,16 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>ロータス経営スゴロク（外部読込・最新版）</title>
+  <title>ロータス経営スゴロク（最新版）</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="assets/css/style.css">
+  <!-- デザイン用CSS -->
+  <link rel="stylesheet" href="assets/css/style.css" />
 </head>
 <body>
   <h1>ロータス経営スゴロク（テスト表示）</h1>
   <div class="box">🎲 ここにスゴロク本体を組み込んでいきます</div>
 
+  <!-- ルーレット -->
   <div class="roulette-wrap">
     <div class="roulette-title">ルーレット（6セグメント）</div>
     <div class="roulette">
@@ -21,20 +23,23 @@
         <div class="label" data-n="5">5</div>
         <div class="label" data-n="6">6</div>
       </div>
-      <div class="pointer">▼</div>
+      <div class="pointer"></div>
     </div>
-
-    <div class="row">
-      <div id="status" class="status">停止</div>
-      <div id="result" class="result">—</div>
+    <div class="controls">
+      <label>現在のチーム：
+        <select id="teamSelect">
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+          <option value="D">D</option>
+        </select>
+      </label>
+      <button id="spin">回す</button>
     </div>
-    <div class="row">
-      <label>現在のチーム：</label>
-      <select id="teamSelect"><option>A</option><option>B</option><option>C</option><option>D</option></select>
-      <button id="spinBtn" class="btn">回す</button>
-    </div>
+    <div id="result" class="result">停止: -</div>
   </div>
 
+  <!-- 動作用JS -->
   <script src="assets/js/game.js"></script>
   <script src="assets/js/controller.js"></script>
 </body>
