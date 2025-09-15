@@ -1,83 +1,77 @@
-(function () {
-  const wheel   = document.getElementById("wheel");
-  const labels  = [...document.querySelectorAll(".label")];
-  const spinBtn = document.getElementById("spinBtn");
-  const result  = document.getElementById("result");
-  const status  = document.getElementById("status");
-  const teamSel = document.getElementById("teamSelect");
+/* ルーレット制御（確定版：当該のみ 0.5s×4 + 1.0s×4 → 2.5倍保持） */
+(() => {
+  const wheel = document.getElementById('wheel');
+  const spinBtn = document.getElementById('spinBtn');
+  const resultEl = document.getElementById('result');
 
-  const centers = [0, 60, 120, 180, 240, 300]; // 1..6 の中心角（12時起点）
-  const R = 110; // 数字半径
+  /** 現在保持中のバッジ（次回回すまで2.5倍のまま） */
+  let heldBadge = null;
+  /** 現在の累積回転角（続けて回した時に逆戻りしないよう加算） */
+  let rot = 0;
 
-  // 配置初期化
-  labels.forEach((el) => {
-    const n = Number(el.dataset.n);
-    const ang = centers[n - 1];
-    const base = `rotate(${ang}deg) translate(${R}px) rotate(${-ang}deg)`;
-    el.style.setProperty("--base", base);
-    el.classList.remove("flash","hold");
-    el.style.transform = `var(--base) scale(1)`;
-  });
-
-  let current = 0;      // 累積角
-  let spinning = false; // 二重クリック防止
-  let held = null;      // 保持中の当該
-
-  function resetHeld(){ if(held){ held.classList.remove("hold","flash"); held=null; } }
-
-  async function flashSequence(el){
-    // 0.5秒×4（ON250/OFF250）
-    const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
-    for(let i=0;i<4;i++){ el.classList.add("flash"); await sleep(250); el.classList.remove("flash"); await sleep(250); }
-    // 1.0秒×4（ON500/OFF500）
-    for(let i=0;i<4;i++){ el.classList.add("flash"); await sleep(500); el.classList.remove("flash"); await sleep(500); }
-    // 保持（次スピンまで）
-    el.classList.add("hold"); held = el;
+  function centerAngleOf(n) {
+    // セグメントは 1..6、12時=0deg。1は 330..30 の中央=0deg付近。
+    // 回転は “ホイールを回す” ので、選んだセグメントの中央を 0deg に合わせる＝
+    // 360 - セグメント中央角を加算。
+    // セグメント幅60deg、1の中央=0deg, 2=60, 3=120, 4=180, 5=240, 6=300
+    const centers = {1:0, 2:60, 3:120, 4:180, 5:240, 6:300};
+    return centers[n];
   }
 
-  function spin(){
-    if(spinning) return;
-    spinning = true; spinBtn.disabled = true;
-    status.textContent = "回転中…"; result.textContent = "…";
-    // 前回保持は仕様によりここで解除
-    labels.forEach(l=>l.classList.remove("flash")); resetHeld();
+  function spinOnce(toNumber) {
+    // 既存保持を解除
+    if (heldBadge) { heldBadge.classList.remove('hold'); heldBadge = null; }
 
-    // ランダム着地（中心±5°）
-    const n = Math.floor(Math.random()*6)+1;
-    const center = centers[n-1];
-    const jitter = (Math.random()*10 - 5);
-    const targetAngle = center + jitter;
+    const n = toNumber ?? (Math.floor(Math.random()*6)+1);
+    const center = centerAngleOf(n);
+    // 多回転させつつ、選んだnが12時に来るように（回すのはホイールなので 360-center で回転）
+    const spins = 4; // 充分に回す
+    const target = rot + (spins*360) + (360 - center);
+    rot = target;
 
-    const spins = 5;
-    const next = current + (360*spins) - targetAngle; // 真上に center が来る回転
-    wheel.style.transform = `rotate(${next}deg)`;
+    // 一旦すべてのパルスクラスを掃除
+    wheel.querySelectorAll('.badge').forEach(b=>{
+      b.classList.remove('pulse-05','pulse-10','hold');
+    });
 
-    const onDone = async () => {
-      wheel.removeEventListener("transitionend", onDone);
-      current = next % 360;
+    // 回転開始
+    wheel.style.transform = `rotate(${target}deg)`;
 
-      // 実効角（真上にある角度）を算出
-      let eff = (-current)%360; if(eff<0) eff+=360;
+    // 回転完了後（CSS 2.2s）に「当該のみ」パルス → 保持
+    spinBtn.disabled = true;
+    setTimeout(() => {
+      const seg = wheel.querySelector(`.seg[data-n="${n}"]`);
+      const badge = seg.querySelector('.badge');
 
-      // 最も近い中心角をHITとする
-      let hit=1, min=360;
-      centers.forEach((c,i)=>{
-        const d = Math.abs(((eff - c + 540)%360)-180);
-        if(d<min){ min=d; hit=i+1; }
-      });
+      // 0.5s × 4
+      badge.classList.add('pulse-05');
 
-      result.textContent = String(hit);
-      status.textContent = "停止";
-      const el = labels.find(l=>Number(l.dataset.n)===hit);
-      if(el) await flashSequence(el);
+      // 次に 1.0s × 4
+      const t1 = 0.5 * 4 * 1000;
+      setTimeout(() => {
+        badge.classList.remove('pulse-05');
+        badge.classList.add('pulse-10');
 
-      const team = teamSel ? teamSel.value : "A";
-      document.dispatchEvent(new CustomEvent("roulette:hit",{ detail:{ value:hit, team } }));
+        // 最後に 2.5倍保持
+        const t2 = 1.0 * 4 * 1000;
+        setTimeout(() => {
+          badge.classList.remove('pulse-10');
+          badge.classList.add('hold');
+          heldBadge = badge;
+          resultEl.textContent = String(n);
+          spinBtn.disabled = false;
 
-      spinning = false; spinBtn.disabled = false;
-    };
-    wheel.addEventListener("transitionend", onDone);
+          // 盤面に通知
+          window.dispatchEvent(new CustomEvent('roulette:stopped', { detail:{ number:n } }));
+        }, t2);
+
+      }, t1);
+    }, 2200);
+
+    return n;
   }
 
-  if(spinBtn) spinBtn.addEventListener("click", spin);
+  spinBtn.addEventListener('click', () => spinOnce());
+  // デバッグ用に公開（必要なら）
+  window.Roulette = { spinOnce };
 })();
