@@ -1,77 +1,77 @@
-/* ルーレット制御（確定版：当該のみ 0.5s×4 + 1.0s×4 → 2.5倍保持） */
-(() => {
-  const wheel = document.getElementById('wheel');
-  const spinBtn = document.getElementById('spinBtn');
-  const resultEl = document.getElementById('result');
+/* ルーレットのロジック（数字は 1..6） */
+const wheel = document.getElementById("wheel");
+const spinBtn = document.getElementById("spinBtn");
+const resultNumEl = document.getElementById("resultNum");
+const labels = Array.from(document.querySelectorAll(".wheel .label"));
 
-  /** 現在保持中のバッジ（次回回すまで2.5倍のまま） */
-  let heldBadge = null;
-  /** 現在の累積回転角（続けて回した時に逆戻りしないよう加算） */
-  let rot = 0;
+let currentAngle = 0;
+let isSpinning = false;
+let holdLabel = null;
 
-  function centerAngleOf(n) {
-    // セグメントは 1..6、12時=0deg。1は 330..30 の中央=0deg付近。
-    // 回転は “ホイールを回す” ので、選んだセグメントの中央を 0deg に合わせる＝
-    // 360 - セグメント中央角を加算。
-    // セグメント幅60deg、1の中央=0deg, 2=60, 3=120, 4=180, 5=240, 6=300
-    const centers = {1:0, 2:60, 3:120, 4:180, 5:240, 6:300};
-    return centers[n];
-  }
+/** idx(0..5) を 12時停止させるための絶対角度を返す */
+function angleForIndex(idx) {
+  // セグメント幅 60deg。ポインタは12時（0deg）を指すので
+  // 目的セグメントの中央(30degずつ)を 0deg に合わせるよう逆回転。
+  // さらに数回転分(>= 3周)を加えて自然に。
+  const segmentCenter = idx * 60 + 30; // 30,90,150,210,270,330
+  const base = 360 * 5; // 5回転
+  return base + (360 - segmentCenter);
+}
 
-  function spinOnce(toNumber) {
-    // 既存保持を解除
-    if (heldBadge) { heldBadge.classList.remove('hold'); heldBadge = null; }
+/** 当該のみ 0.5s×4 + 1.0s×4 → 保持 */
+function flashSequence(targetLabel, done) {
+  // 既存のフラッシュ・保持をリセット
+  labels.forEach(l => l.classList.remove("flash","hold"));
+  if (holdLabel) holdLabel.classList.remove("hold");
 
-    const n = toNumber ?? (Math.floor(Math.random()*6)+1);
-    const center = centerAngleOf(n);
-    // 多回転させつつ、選んだnが12時に来るように（回すのはホイールなので 360-center で回転）
-    const spins = 4; // 充分に回す
-    const target = rot + (spins*360) + (360 - center);
-    rot = target;
+  let count = 0;
+  let visible = false;
 
-    // 一旦すべてのパルスクラスを掃除
-    wheel.querySelectorAll('.badge').forEach(b=>{
-      b.classList.remove('pulse-05','pulse-10','hold');
+  const tick = () => {
+    if (count < 8) {
+      // 0..3 は 0.5s、4..7 は 1.0s
+      const dur = count < 4 ? 500 : 1000;
+      visible = !visible;
+      targetLabel.classList.toggle("flash", visible);
+      count++;
+      setTimeout(tick, dur);
+    } else {
+      // 最終保持
+      targetLabel.classList.remove("flash");
+      targetLabel.classList.add("hold","flash"); // 視覚的に強く維持
+      holdLabel = targetLabel;
+      done && done();
+    }
+  };
+  tick();
+}
+
+function spinOnce() {
+  if (isSpinning) return;
+  isSpinning = true;
+
+  // ランダム結果（1..6）
+  const idx = Math.floor(Math.random() * 6); // 0..5
+  const deg = angleForIndex(idx);
+  currentAngle += deg;
+
+  // 回転開始
+  wheel.style.transform = `rotate(${currentAngle}deg)`;
+
+  // アニメ終了後
+  wheel.addEventListener("transitionend", function handler() {
+    wheel.removeEventListener("transitionend", handler);
+
+    const value = idx + 1;
+    resultNumEl.textContent = String(value);
+
+    const label = labels[idx];
+    flashSequence(label, () => {
+      // ルーレット確定 → 盤面更新（controller.js）
+      window.dispatchEvent(new CustomEvent("roulette:stop", { detail: { steps: value } }));
+      isSpinning = false;
     });
+  }, { once: true });
+}
 
-    // 回転開始
-    wheel.style.transform = `rotate(${target}deg)`;
-
-    // 回転完了後（CSS 2.2s）に「当該のみ」パルス → 保持
-    spinBtn.disabled = true;
-    setTimeout(() => {
-      const seg = wheel.querySelector(`.seg[data-n="${n}"]`);
-      const badge = seg.querySelector('.badge');
-
-      // 0.5s × 4
-      badge.classList.add('pulse-05');
-
-      // 次に 1.0s × 4
-      const t1 = 0.5 * 4 * 1000;
-      setTimeout(() => {
-        badge.classList.remove('pulse-05');
-        badge.classList.add('pulse-10');
-
-        // 最後に 2.5倍保持
-        const t2 = 1.0 * 4 * 1000;
-        setTimeout(() => {
-          badge.classList.remove('pulse-10');
-          badge.classList.add('hold');
-          heldBadge = badge;
-          resultEl.textContent = String(n);
-          spinBtn.disabled = false;
-
-          // 盤面に通知
-          window.dispatchEvent(new CustomEvent('roulette:stopped', { detail:{ number:n } }));
-        }, t2);
-
-      }, t1);
-    }, 2200);
-
-    return n;
-  }
-
-  spinBtn.addEventListener('click', () => spinOnce());
-  // デバッグ用に公開（必要なら）
-  window.Roulette = { spinOnce };
-})();
+spinBtn?.addEventListener("click", spinOnce);

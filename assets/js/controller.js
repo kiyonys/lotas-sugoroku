@@ -1,70 +1,49 @@
-/* タブ切り替え・盤面生成とルーレット連携（デモ） */
-(() => {
-  /* ---- タブ ---- */
-  const tabs = document.querySelectorAll('.tab');
-  const panes = document.querySelectorAll('.tabpane');
-  tabs.forEach(btn=>{
-    btn.addEventListener('click', () => {
-      tabs.forEach(b=>b.classList.remove('active'));
-      panes.forEach(p=>p.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById(btn.dataset.tab).classList.add('active');
+/* タブ切り替え */
+document.querySelectorAll(".tab").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(b => b.classList.remove("is-active"));
+    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("is-active"));
+    btn.classList.add("is-active");
+    document.getElementById(btn.dataset.tab)?.classList.add("is-active");
+  });
+});
+
+/* 盤面（36マス）初期化＆進行 */
+const boardGrid = document.getElementById("boardGrid");
+const teamSelect = document.getElementById("teamSelect");
+
+const BOARD_SIZE = 36;
+const teamPos = { A: 0, B: 0, C: 0, D: 0 };
+
+function renderBoard() {
+  boardGrid.innerHTML = "";
+  for (let i = 0; i < BOARD_SIZE; i++) {
+    const div = document.createElement("div");
+    div.className = "cell";
+    div.textContent = String(i + 1);
+    // 各チームの駒（チップ）を表示
+    Object.entries(teamPos).forEach(([team, pos]) => {
+      if (pos === i) {
+        const chip = document.createElement("span");
+        chip.className = "chip " + team;
+        div.appendChild(chip);
+        if (team === teamSelect.value) div.classList.add("active");
+      }
     });
-  });
-
-  /* ---- 盤面（36マス） ---- */
-  const board = document.getElementById('boardGrid');
-  const teamSel = document.getElementById('teamSel');
-  const teamLabel = document.getElementById('teamLabel');
-  const posLabel = document.getElementById('posLabel');
-  const resetBtn = document.getElementById('resetBoard');
-
-  // マス色ローテ
-  const colorClass = (i) => ['c1','c2','c3','c4'][i%4];
-
-  // 36マス生成（1=スタート, 36=ゴール）
-  const cells = [];
-  for (let i=1;i<=36;i++){
-    const d = document.createElement('div');
-    d.className = `cell ${colorClass(i)}` + (i===1?' start':'') + (i===36?' goal':'');
-    const no = document.createElement('div');
-    no.className = 'no';
-    no.textContent = String(i);
-    d.appendChild(no);
-    board.appendChild(d);
-    cells.push(d);
+    boardGrid.appendChild(div);
   }
+}
 
-  // チーム毎の位置
-  const state = {
-    A:1, B:1
-  };
-  const tokenA = document.createElement('div'); tokenA.className='token';
-  const tokenB = document.createElement('div'); tokenB.className='token'; tokenB.style.background='linear-gradient(#ad1457,#d81b60)';
-  function placeTokens(){
-    // 既存トークン掃除
-    cells.forEach(c=>{
-      c.querySelectorAll('.token').forEach(t=>t.remove());
-    });
-    // 配置
-    cells[state.A-1]?.appendChild(tokenA);
-    cells[state.B-1]?.appendChild(tokenB);
-    teamLabel.textContent = teamSel.value;
-    posLabel.textContent = String(state[teamSel.value]);
-  }
-  placeTokens();
+function advanceTeam(team, steps) {
+  teamPos[team] = (teamPos[team] + steps) % BOARD_SIZE;
+  renderBoard();
+}
 
-  // ルーレット停止 → 現在選択チームの駒を進める
-  window.addEventListener('roulette:stopped', (ev) => {
-    const n = ev.detail.number;
-    const team = teamSel.value;
-    state[team] = Math.min(36, state[team] + n);
-    placeTokens();
-  });
+// 初期描画
+renderBoard();
 
-  resetBtn.addEventListener('click', () => {
-    state.A = 1; state.B = 1; placeTokens();
-  });
-
-  teamSel.addEventListener('change', placeTokens);
-})();
+// ルーレット結果との連携
+window.addEventListener("roulette:stop", (e) => {
+  const steps = e.detail.steps;
+  advanceTeam(teamSelect.value, steps);
+});

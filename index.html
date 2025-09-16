@@ -2,73 +2,71 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ロータス経営スゴロク（公開版）</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ロータス経営スゴロク（完成版）</title>
   <link rel="stylesheet" href="assets/css/style.css" />
 </head>
 <body>
-  <header class="site-head">
+  <main class="container">
     <h1>ロータス経営スゴロク</h1>
-    <nav class="tabs">
-      <button class="tab active" data-tab="roulette">ルーレット</button>
-      <button class="tab" data-tab="board">盤面（デモ）</button>
-      <button class="tab" data-tab="docs">資料</button>
-    </nav>
-  </header>
 
-  <!-- ルーレット -->
-  <section id="roulette" class="tabpane active">
-    <div class="box">
-      <div class="row">
-        <div class="roulette-wrap">
-          <div class="pointer" aria-hidden="true"></div>
-          <div id="wheel" class="wheel" role="img" aria-label="6セグメントルーレット">
-            <!-- 6セグメント（1〜6） -->
-            <div class="seg" data-n="1"><span class="badge">1</span></div>
-            <div class="seg" data-n="2"><span class="badge">2</span></div>
-            <div class="seg" data-n="3"><span class="badge">3</span></div>
-            <div class="seg" data-n="4"><span class="badge">4</span></div>
-            <div class="seg" data-n="5"><span class="badge">5</span></div>
-            <div class="seg" data-n="6"><span class="badge">6</span></div>
-          </div>
+    <section class="tabs">
+      <button class="tab is-active" data-tab="roulette">ルーレット</button>
+      <button class="tab" data-tab="board">盤面（36マス）</button>
+      <button class="tab" data-tab="docs">資料</button>
+    </section>
+
+    <!-- ルーレット -->
+    <section id="roulette" class="tab-panel is-active">
+      <div class="roulette-wrap">
+        <div class="pointer">▲</div>
+        <div id="wheel" class="wheel">
+          <!-- 6セグメント / 数字は各セグメントの重心に配置 -->
+          <span class="label" data-idx="0">1</span>
+          <span class="label" data-idx="1">2</span>
+          <span class="label" data-idx="2">3</span>
+          <span class="label" data-idx="3">4</span>
+          <span class="label" data-idx="4">5</span>
+          <span class="label" data-idx="5">6</span>
         </div>
       </div>
 
-      <div class="row gap">
-        <button id="spinBtn" class="btn">回す</button>
+      <div class="controls">
         <label>現在のチーム：
-          <select id="teamSel">
-            <option value="A">A</option>
+          <select id="teamSelect">
+            <option value="A" selected>A</option>
             <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
           </select>
         </label>
-        <div class="status">停止 <span id="result">-</span></div>
+        <button id="spinBtn">回す</button>
+        <div class="result">停止 <span id="resultNum">–</span></div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- 盤面 -->
-  <section id="board" class="tabpane">
-    <div class="box">
-      <h2>36マス盤面（デモ）</h2>
-      <div id="boardGrid" class="board-grid" aria-label="36マスの盤面"></div>
-      <div class="row gap">
-        <button id="resetBoard" class="btn-sub">駒リセット</button>
-        <div class="status">チーム <span id="teamLabel">A</span>：<span id="posLabel">1</span> マス</div>
+    <!-- 盤面 -->
+    <section id="board" class="tab-panel">
+      <div class="board-wrap">
+        <div id="boardGrid" class="board-grid"></div>
       </div>
-    </div>
-  </section>
+      <div class="legend">
+        <span class="cell demo"></span> 現在位置（チーム別）
+      </div>
+    </section>
 
-  <!-- 資料 -->
-  <section id="docs" class="tabpane">
-    <div class="box">
-      <h2>資料</h2>
-      <p>配布物や画像等は <code>downloads/</code> に配置してください。</p>
-      <ul class="doc-list">
-        <li><a href="downloads/" target="_blank" rel="noopener">downloads/ を開く</a></li>
-      </ul>
-    </div>
-  </section>
+    <!-- 資料（埋め込み/差し替え自由） -->
+    <section id="docs" class="tab-panel">
+      <div class="docs-box">
+        <p>公開用の配布資料は <code>downloads/</code> に置いてください。</p>
+        <ul>
+          <li>手順書（README.md）</li>
+          <li>QR付チラシ（PDF）</li>
+          <li>スライド（PPTX）</li>
+        </ul>
+      </div>
+    </section>
+  </main>
 
   <script src="assets/js/game.js"></script>
   <script src="assets/js/controller.js"></script>
