@@ -1,41 +1,73 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <title>ロータス経営スゴロク（外部読込・最新版）</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="assets/css/style.css">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>最強経営スゴロク｜講師用</title>
+<style>body{font-family:system-ui,"BIZ UDGothic","Yu Gothic UI";margin:0;background:#f6f7fb}header{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#fff;border-bottom:1px solid #e2e4ea}main{display:grid;grid-template-columns:1.2fr .8fr;gap:12px;padding:12px}@media(max-width:1080px){main{grid-template-columns:1fr}}.card{background:#fff;border:1px solid #e2e4ea;border-radius:12px;padding:12px}.log{width:100%;min-height:140px;border:1px solid #e2e4ea;border-radius:8px;padding:8px;font-family:ui-monospace,Menlo,monospace}.qr{display:grid;place-items:center}.btn{padding:.6rem .8rem;border:1px solid #d0d3db;border-radius:.6rem;background:#fff;cursor:pointer}.btnP{background:#5b8def;color:#fff;border-color:#5b8def}.hidden{display:none}.badge{padding:2px 8px;border:1px solid #e2e4ea;border-radius:999px;background:#fff}.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center}.box{background:#fff;border:1px solid #e2e4ea;border-radius:12px;padding:14px;max-width:720px;width:min(96vw,720px)}textarea{width:100%;min-height:160px;border:1px solid #e2e4ea;border-radius:8px;padding:8px}</style>
 </head>
 <body>
-  <h1>ロータス経営スゴロク（テスト表示）</h1>
-  <div class="box">🎲 ここにスゴロク本体を組み込んでいきます</div>
+<header>
+  <div><strong>最強経営スゴロク｜講師用（ワンファイル）</strong> <span id="cfgState" class="badge">未設定</span></div>
+  <div><span class="badge">event: <span id="eventId"></span></span>
+    <button id="btnCfg" class="btn">設定</button>
+    <button id="btnReset" class="btn">セッション初期化</button>
+  </div>
+</header>
 
-  <div class="roulette-wrap">
-    <div class="roulette-title">ルーレット（6セグメント）</div>
-    <div class="roulette">
-      <div id="wheel" class="wheel">
-        <div class="label" data-n="1">1</div>
-        <div class="label" data-n="2">2</div>
-        <div class="label" data-n="3">3</div>
-        <div class="label" data-n="4">4</div>
-        <div class="label" data-n="5">5</div>
-        <div class="label" data-n="6">6</div>
-      </div>
-      <div class="pointer">▼</div>
+<main>
+  <section class="card">
+    <h3>参加者QR</h3>
+    <div class="qr"><canvas id="qr" width="220" height="220" style="border:1px dashed #ccd"></canvas></div>
+    <p><a id="attendeeLink" target="_blank" rel="noopener">参加者ページを開く</a></p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <button id="btnSurvey" class="btn">📝 アンケートQR</button>
+      <button id="btnEnding" class="btn">🎬 エンディングへ</button>
     </div>
+  </section>
 
-    <div class="row">
-      <div id="status" class="status">停止</div>
-      <div id="result" class="result">—</div>
-    </div>
-    <div class="row">
-      <label>現在のチーム：</label>
-      <select id="teamSelect"><option>A</option><option>B</option><option>C</option><option>D</option></select>
-      <button id="spinBtn" class="btn">回す</button>
+  <aside class="card">
+    <h3>進行ログ</h3>
+    <textarea id="log" class="log" readonly></textarea>
+  </aside>
+</main>
+
+<section id="survey" class="card hidden" style="margin:12px">
+  <h2>アンケートのご協力をお願いします</h2>
+  <div class="qr"><canvas id="qrSurvey" width="220" height="220" style="border:1px dashed #ccd"></canvas></div>
+  <p><a id="surveyLink" target="_blank" rel="noopener">フォームを開く</a></p>
+  <p style="font-size:12px;color:#666">※ 入力目安90秒。100秒後にアムロが声掛けします。</p>
+</section>
+
+<section id="ending" class="card hidden" style="margin:12px">
+  <h2>エンディング</h2>
+  <div id="player"></div>
+</section>
+
+<div id="cfgModal" class="modal hidden">
+  <div class="box">
+    <h3>Firebase設定を貼り付け → 保存（次回から自動）</h3>
+    <textarea id="cfgText" placeholder='{"apiKey":"...","authDomain":"...","databaseURL":"https://...","projectId":"...","appId":"..."}'></textarea>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button id="cfgSave" class="btn btnP">保存</button>
+      <button id="cfgCancel" class="btn">閉じる</button>
     </div>
   </div>
+</div>
 
-  <script src="assets/js/game.js"></script>
-  <script src="assets/js/controller.js"></script>
+<script>
+const $=q=>document.querySelector(q);const logEl=$("#log");function log(t){logEl.value+=(logEl.value?"\\n":"")+t;logEl.scrollTop=logEl.scrollHeight;}
+const EVENT_ID=(new URL(location.href)).searchParams.get("event")||"event-"+new Date().toISOString().slice(0,10);$("#eventId").textContent=EVENT_ID;
+function getCfg(){const s=localStorage.getItem("lotus_firebase_cfg");if(!s)return null;try{return JSON.parse(s);}catch(e){return null;}}
+function openCfg(){$("#cfgModal").classList.remove("hidden");const c=getCfg();$("#cfgText").value=c?JSON.stringify(c,null,2):"";}
+function saveCfg(){try{const obj=JSON.parse($("#cfgText").value);localStorage.setItem("lotus_firebase_cfg",JSON.stringify(obj));$("#cfgModal").classList.add("hidden");location.reload();}catch(e){alert("JSONの形式が不正です");}}
+$("#btnCfg").addEventListener("click",openCfg);$("#cfgSave").addEventListener("click",saveCfg);$("#cfgCancel").addEventListener("click",()=>$("#cfgModal").classList.add("hidden"));
+const CFG=getCfg();$("#cfgState").textContent=CFG?"設定済":"未設定";if(!CFG)openCfg();
+function b64(s){return btoa(unescape(encodeURIComponent(s)));}const attendeeURL=location.origin+location.pathname.replace(/[^\/]+$/,"")+"attendee.html?event="+encodeURIComponent(EVENT_ID)+(CFG?("&cfg="+b64(JSON.stringify(CFG))):"");$("#attendeeLink").href=attendeeURL;makeQR($("#qr"),attendeeURL);
+const surveyURL=(new URL(location.href)).searchParams.get("survey")||"https://docs.google.com/forms/d/e/xxxxxxxx/formResponse";$("#surveyLink").href=surveyURL;makeQR($("#qrSurvey"),surveyURL);$("#btnSurvey").addEventListener("click",()=>{$("#survey").classList.remove("hidden");setTimeout(()=>{say("アムロ","皆さん、アンケート入力はお済みでしょうか？");},100000);});
+$("#btnEnding").addEventListener("click",()=>{document.getElementById("ending").classList.remove("hidden");say("メーテル","最後にこの動画を視聴してください。");setTimeout(()=>{say("メーテル","それでは、過去から未来へ向けて、しゅっぱーつ");},1200);setTimeout(()=>{say("全員","しゅっぱーーつ！！");player&&player.playVideo();},2400);});
+function say(role,text){log(role+"："+text);if("speechSynthesis"in window){const u=new SpeechSynthesisUtterance(text);u.lang="ja-JP";u.rate=role==="ラムちゃん"?1.08:role==="アムロ"?1.05:role==="流川"?0.95:1.0;u.pitch=role==="ラムちゃん"?1.25:role==="アムロ"?1.10:role==="流川"?0.95:1.05;speechSynthesis.speak(u);}}
+const tag=document.createElement("script");tag.src="https://www.youtube.com/iframe_api";document.body.appendChild(tag);let player=null;window.onYouTubeIframeAPIReady=function(){player=new YT.Player('player',{videoId:'5sjrQFWwTVE',playerVars:{rel:0,playsinline:1}});};
+function makeQR(canvas,text){const ctx=canvas.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle="#111";ctx.fillRect(10,10,200,200);ctx.fillStyle="#fff";ctx.font="12px monospace";ctx.fillText("QR",100,120);} // 実運用はqrcodeライブラリを同梱推奨
+</script>
 </body>
 </html>

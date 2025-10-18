@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>最強経営スゴロク｜参加者用</title>
+<style>:root{--bg:#f6f7fb;--card:#fff;--line:#e2e4ea;--accent:#5b8def;--text:#222}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:"BIZ UDGothic","Yu Gothic UI",system-ui;color:var(--text)}.wrap{max-width:520px;margin:0 auto;padding:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0}input,select,button{width:100%;padding:.6rem .8rem;border:1px solid var(--line);border-radius:.6rem;font-family:inherit}button{cursor:pointer;background:#fff}.btnP{background:var(--accent);color:#fff;border-color:var(--accent)}.hidden{display:none}.role{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:#fff}.role.red{border-color:#e86}.role.yellow{border-color:#ec6}.role.green{border-color:#6d8}.role.blue{border-color:#69f}.spin{display:grid;place-items:center;height:200px;border:1px dashed #ccd;border-radius:12px;margin-top:10px}.spin button{width:auto}</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h3>入場フォーム</h3>
+    <label>会社名（会場には表示しません）<input id="company" placeholder="例：ABCモビリティ"></label>
+    <label>お名前（会場には表示しません）<input id="name" placeholder="例：山田"></label>
+    <label>従業員数<select id="emp"><option value="">選択</option><option>1-5</option><option>6-20</option><option>21-50</option><option>51+</option></select></label>
+    <button id="enter" class="btnP">参加する</button>
+    <p style="font-size:12px;color:#666">※ 会場画面には会社名・氏名は表示されません（個社特定禁止）</p>
+  </div>
+  <div id="joined" class="card hidden">
+    <div class="center">あなたは <span id="myTeam" class="role">---</span> チームです</div>
+    <div class="spin">
+      <div class="center">
+        <p id="spinStatus">順番待ちです…</p>
+        <button id="spinBtn" class="btnP hidden">🎡 ルーレットを回す</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="cfgModal" class="card hidden" style="max-width:520px;margin:12px auto">
+  <h3>Firebase設定（必要な場合のみ貼付け）</h3>
+  <textarea id="cfgText" style="width:100%;min-height:140px;border:1px solid #e2e4ea;border-radius:8px;padding:8px" placeholder='{"apiKey":"...","authDomain":"...","databaseURL":"https://...","projectId":"...","appId":"..."}'></textarea>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+    <button id="cfgSave" class="btnP">保存</button>
+  </div>
+  <p style="font-size:12px;color:#666">通常は不要です。講師側QRのURLに設定が埋め込まれています。</p>
+</div>
+
+<script>
+const $=q=>document.querySelector(q);
+const EVENT_ID=(new URL(location.href)).searchParams.get("event")||"event-"+new Date().toISOString().slice(0,10);
+const pid="pid_"+Math.random().toString(36).slice(2);
+function ub64(s){try{return decodeURIComponent(escape(atob(s)));}catch(e){return null;}}
+function getCfg(){const u=(new URL(location.href)).searchParams.get("cfg");if(u){try{const obj=JSON.parse(ub64(u));localStorage.setItem("lotus_firebase_cfg",JSON.stringify(obj));return obj;}catch(e){}}const s=localStorage.getItem("lotus_firebase_cfg");if(!s)return null;try{return JSON.parse(s);}catch(e){return null;}}
+function roleBadge(team){return `<span class="role ${team}">${team}</span>`;}
+const CFG=getCfg();if(!CFG){document.getElementById("cfgModal").classList.remove("hidden");}
+import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js").then(async ({initializeApp})=>{
+  if(!CFG)return;const app=initializeApp(CFG);
+  const {getDatabase,ref,set,get,onValue,push}=await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js");
+  const db=getDatabase(app);const lobbyRef=ref(db,`sessions/${EVENT_ID}/lobby/participants/${pid}`);
+  const lobbyListRef=ref(db,`sessions/${EVENT_ID}/lobby/participants`);const tokenRef=ref(db,`sessions/${EVENT_ID}/game/pressToken`);
+  const reqRef=ref(db,`sessions/${EVENT_ID}/game/spinRequests`);
+  document.getElementById("enter").addEventListener("click",async()=>{
+    const company=$("#company").value.trim();const name=$("#name").value.trim();const emp=$("#emp").value;
+    if(!company||!name||!emp){alert("未入力があります");return;}
+    const parts=(await get(lobbyListRef)).val()||{};const counts={red:0,yellow:0,green:0,blue:0};
+    Object.values(parts).forEach(p=>{if(counts[p.team]!=null)counts[p.team]++;});const order=["red","yellow","green","blue"];
+    let best="red",bestN=counts.red;for(const c of order){if(counts[c]<bestN){best=c;bestN=counts[c];}}
+    await set(lobbyRef,{nameMasked:name.slice(0,1)+"＊",companyMasked:company.slice(0,2)+"＊",employeesBand:emp,team:best,joinedAt:Date.now()});
+    document.getElementById("joined").classList.remove("hidden");document.getElementById("myTeam").outerHTML=roleBadge(best);localStorage.setItem("team",best);
+  });
+  onValue(tokenRef,(snap)=>{const tok=snap.val()||{};const myTeam=localStorage.getItem("team");const isHolder=tok.holder===pid&&tok.team===myTeam;
+    document.getElementById("spinBtn").classList.toggle("hidden",!isHolder);
+    document.getElementById("spinStatus").textContent=isHolder?"あなたに権利が回ってきました！":(tok.team===myTeam?"チーム内で誰かが押せます…":"順番待ちです…");});
+  document.getElementById("spinBtn").addEventListener("click",async()=>{const team=localStorage.getItem("team");if(!team)return;const k=push(reqRef);await set(k,{pid,team,ts:Date.now()});
+    document.getElementById("spinBtn").classList.add("hidden");document.getElementById("spinStatus").textContent="回転しました！結果を待っています…";});
+});
+document.getElementById("cfgSave").addEventListener("click",()=>{try{const obj=JSON.parse(document.getElementById("cfgText").value);localStorage.setItem("lotus_firebase_cfg",JSON.stringify(obj));location.reload();}catch(e){alert("JSONが不正");}});
+</script>
+</body>
+</html>
