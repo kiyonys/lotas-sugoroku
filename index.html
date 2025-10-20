@@ -4,6 +4,32 @@
 <link rel="stylesheet" href="assets/css/app.css"/>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+<script>
+// 1回だけ: GitHub Pages上の config.json を読んで保存 → 画面を更新
+(async () => {
+  try {
+    // すでに設定済みなら何もしない（無限リロード防止）
+    if (localStorage.getItem('lotus_firebase_cfg')) return;
+
+    const CONFIG_URL = 'https://kiyonys.github.io/lotas-sugoroku/config.json';
+    const res = await fetch(CONFIG_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error('fetch failed: ' + res.status);
+    const cfg = await res.json();
+
+    // 簡易バリデーション
+    if (!cfg.apiKey || !cfg.projectId) throw new Error('invalid config.json');
+
+    // 保存（講師・参加者で共通のキー名）
+    localStorage.setItem('lotus_firebase_cfg', JSON.stringify(cfg));
+
+    // 画面を更新（右上の表示が「設定済」になる）
+    location.reload();
+  } catch (e) {
+    console.error('config setup error:', e);
+    alert('設定ファイルの読込みに失敗しました: ' + e.message);
+  }
+})();
+</script>
 </head>
 <body data-page="lecturer">
 <div class="wrap">
