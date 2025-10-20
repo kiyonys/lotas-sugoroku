@@ -1,0 +1,22 @@
+body {
+  background-color: #0b132b;
+  color: #eee;
+  font-family: "BIZ UDPGothic", Meiryo, sans-serif;
+}
+.panel {
+  background: #1c2541;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+button {
+  background: #3a506b;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+button:hover {
+  background: #5bc0be;
+}
