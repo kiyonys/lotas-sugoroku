@@ -31,3 +31,43 @@
 </div>
 <script src="assets/js/app.js"></script>
 </body></html>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+  import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+  // Firebase設定をlocalStorageから取得
+  const cfg = JSON.parse(localStorage.getItem("lotus_firebase_cfg"));
+  if (!cfg) {
+    alert("Firebase設定が見つかりません。講師ページで設定してください。");
+  } else {
+    const app = initializeApp(cfg);
+    const db = getFirestore(app);
+
+    // フォーム送信処理
+    document.querySelector("button.btn.accent").addEventListener("click", async (e) => {
+      e.preventDefault();
+
+      const company = document.querySelector("input[placeholder='例：ABCモビリティ']").value.trim();
+      const name = document.querySelector("input[placeholder='例：山田']").value.trim();
+      const size = document.querySelector("select").value;
+
+      if (!company || !name || !size) {
+        alert("全ての項目を入力してください。");
+        return;
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const eventId = params.get("event") || "event-unknown";
+
+      try {
+        await addDoc(collection(db, "events", eventId, "attendees"), {
+          company, name, size, timestamp: serverTimestamp(),
+        });
+        alert("✅ 登録が完了しました。");
+      } catch (err) {
+        console.error(err);
+        alert("⚠️ 登録エラー: " + err.message);
+      }
+    });
+  }
+</script>
