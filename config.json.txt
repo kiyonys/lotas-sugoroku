@@ -1,0 +1,9 @@
+{
+  "apiKey": "AIzaSyDLn0rEhu_A0BM7CuaQa6F826gpVzqEkXs",
+  "authDomain": "lotas-workshop.firebaseapp.com",
+  "projectId": "lotas-workshop",
+  "storageBucket": "lotas-workshop.firebasestorage.app",
+  "messagingSenderId": "669026798163",
+  "appId": "1:669026798163:web:4a959b4c5ef677e946d4a6",
+  "measurementId": "G-XPRF3YRFEK"
+}
