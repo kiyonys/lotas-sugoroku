@@ -56,5 +56,14 @@
   </div>
   <div class="footer">© Lotus Workshop</div>
 </div>
-<script src="assets/js/app.js"></script>
 </body></html>
+<script>
+  // --- QR生成：公開URLベースで参加者リンクを出力 ---
+  const eventKey = "event-2025-10-21"; // ←日付は必要に応じて変更
+  const qrDiv = document.getElementById("qr");
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https://kiyonys.github.io/lotas-sugoroku/attendee.html?event=${eventKey}`;
+  qrDiv.innerHTML = `<img src="${qrUrl}" alt="QR" style="border-radius:8px;">`;
+
+  // イベントキー表示
+  document.getElementById("eventKey").textContent = eventKey;
+</script>
