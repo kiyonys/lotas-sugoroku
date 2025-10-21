@@ -5,6 +5,42 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 </head>
+  <!-- Firebase 共通ローダー（config.json を取りにいき、初期化する） -->
+<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-database-compat.js"></script>
+<script>
+(async () => {
+  try {
+    // 1) config.json を Pages から取得（キャッシュ無効）
+    const CONFIG_URL = 'https://kiyonys.github.io/lotas-sugoroku/config.json';
+    const res = await fetch(CONFIG_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error('fetch failed: ' + res.status);
+    const cfg = await res.json();
+
+    // 2) LocalStorage に保存（参加者ページでも使う）
+    localStorage.setItem('lotus_firebase_cfg', JSON.stringify(cfg));
+
+    // 3) Firebase 初期化（Realtime Database）
+    if (!firebase.apps.length) firebase.initializeApp(cfg);
+    window.rtdb = firebase.database();
+
+    // 4) eventキー（?event=... があれば保存）
+    const p = new URL(location.href).searchParams.get('event');
+    if (p) localStorage.setItem('eventKey', p);
+    window.EVENT_KEY = localStorage.getItem('eventKey') || p || '';
+
+    // 5) 画面のバッジ/イベント表示を更新（要素がある時だけ）
+    const badge = document.getElementById('badge');
+    if (badge) badge.textContent = '設定済';
+    const ev = document.getElementById('eventKey');
+    if (ev && window.EVENT_KEY) ev.textContent = window.EVENT_KEY;
+  } catch (e) {
+    console.error(e);
+    alert('設定ファイルの読み込みに失敗しました：' + e.message);
+  }
+})();
+</script>
+
 <body data-page="attendee">
 <div class="wrap">
   <div class="panel">
