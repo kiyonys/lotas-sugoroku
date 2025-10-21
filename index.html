@@ -39,6 +39,9 @@
         <h2>参加者QR</h2><span class="badge" id="badge">未設定</span>
       </div>
       <div id="qr" class="qr-box">QR</div>
+      const d = new Date();
+const eventKey = `event-${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
       <div class="grid-2" style="margin-top:12px">
         <button class="btn accent" id="btnOpenAttendee">参加者ページを開く</button>
         <button class="btn" id="btnEnding">エンディングへ</button>
