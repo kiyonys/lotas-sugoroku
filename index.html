@@ -94,15 +94,42 @@ const eventKey = `event-${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'
   }
 })();
 </script>
+<script>
+  // ---- JSTで今日の日付を event-YYYY-MM-DD にする（?event= があればそれを優先）
+  function formatDateJST(d = new Date()) {
+    const jst = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+    const y = jst.getFullYear();
+    const m = String(jst.getMonth() + 1).padStart(2, '0');
+    const day = String(jst.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  // 1) URLに ?event= があれば優先、無ければ今日のキー
+  const params = new URLSearchParams(location.search);
+  const eventKey = params.get('event') || `event-${formatDateJST()}`;
+
+  // 2) 参加者用の公開URL（HTTPS固定）
+  const attendeeUrl = `https://kiyonys.github.io/lotas-sugoroku/attendee.html?event=${encodeURIComponent(eventKey)}`;
+
+  // 3) QRコード生成APIに渡す
+  const qrApi = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=';
+  const qrUrl = qrApi + encodeURIComponent(attendeeUrl);
+
+  // 4) 画面にQRを表示
+  const qrDiv = document.getElementById('qr');
+  if (qrDiv) {
+    qrDiv.innerHTML = `<img src="${qrUrl}" alt="QR" style="border-radius:8px;">`;
+  }
+
+  // 5) eventキーを表示
+  const ev = document.getElementById('eventKey');
+  if (ev) ev.textContent = eventKey;
+
+  // 6) 「参加者ページを開く」ボタン（任意）
+  const openBtn = document.getElementById('openAttendee');
+  if (openBtn) openBtn.onclick = () => window.open(attendeeUrl, '_blank');
+</script>
 
 </body></html>
 <script>
-  // --- QR生成：公開URLベースで参加者リンクを出力 ---
-  const eventKey = "event-2025-10-21"; // ←日付は必要に応じて変更
-  const qrDiv = document.getElementById("qr");
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https://kiyonys.github.io/lotas-sugoroku/attendee.html?event=${eventKey}`;
-  qrDiv.innerHTML = `<img src="${qrUrl}" alt="QR" style="border-radius:8px;">`;
 
-  // イベントキー表示
-  document.getElementById("eventKey").textContent = eventKey;
-</script>
