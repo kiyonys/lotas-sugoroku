@@ -5,42 +5,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 </head>
-  <!-- Firebase 共通ローダー（config.json を取りにいき、初期化する） -->
-<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-database-compat.js"></script>
-<script>
-(async () => {
-  try {
-    // 1) config.json を Pages から取得（キャッシュ無効）
-    const CONFIG_URL = 'https://kiyonys.github.io/lotas-sugoroku/config.json';
-    const res = await fetch(CONFIG_URL, { cache: 'no-store' });
-    if (!res.ok) throw new Error('fetch failed: ' + res.status);
-    const cfg = await res.json();
-
-    // 2) LocalStorage に保存（参加者ページでも使う）
-    localStorage.setItem('lotus_firebase_cfg', JSON.stringify(cfg));
-
-    // 3) Firebase 初期化（Realtime Database）
-    if (!firebase.apps.length) firebase.initializeApp(cfg);
-    window.rtdb = firebase.database();
-
-    // 4) eventキー（?event=... があれば保存）
-    const p = new URL(location.href).searchParams.get('event');
-    if (p) localStorage.setItem('eventKey', p);
-    window.EVENT_KEY = localStorage.getItem('eventKey') || p || '';
-
-    // 5) 画面のバッジ/イベント表示を更新（要素がある時だけ）
-    const badge = document.getElementById('badge');
-    if (badge) badge.textContent = '設定済';
-    const ev = document.getElementById('eventKey');
-    if (ev && window.EVENT_KEY) ev.textContent = window.EVENT_KEY;
-  } catch (e) {
-    console.error(e);
-    alert('設定ファイルの読み込みに失敗しました：' + e.message);
-  }
-})();
-</script>
-
 <body data-page="attendee">
 <div class="wrap">
   <div class="panel">
@@ -66,44 +30,45 @@
   </div>
 </div>
 <script src="assets/js/app.js"></script>
-</body></html>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
   import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-  // Firebase設定をlocalStorageから取得
-  const cfg = JSON.parse(localStorage.getItem("lotus_firebase_cfg"));
-  if (!cfg) {
-    alert("Firebase設定が見つかりません。講師ページで設定してください。");
-  } else {
-    const app = initializeApp(cfg);
-    const db = getFirestore(app);
+  // 🔹 config.json から設定を取得
+  fetch('https://kiyonys.github.io/lotas-sugoroku/config.json')
+    .then(response => response.json())
+    .then(async config => {
+      const app = initializeApp(config);
+      const db = getFirestore(app);
 
-    // フォーム送信処理
-    document.querySelector("button.btn.accent").addEventListener("click", async (e) => {
-      e.preventDefault();
+      // 🔹 フォーム送信イベント
+      const form = document.getElementById('entryForm');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const company = form.company.value;
+        const name = form.name.value;
+        const size = form.size.value;
+        const event = `event-${new Date().toISOString().slice(0,10)}`;
 
-      const company = document.querySelector("input[placeholder='例：ABCモビリティ']").value.trim();
-      const name = document.querySelector("input[placeholder='例：山田']").value.trim();
-      const size = document.querySelector("select").value;
-
-      if (!company || !name || !size) {
-        alert("全ての項目を入力してください。");
-        return;
-      }
-
-      const params = new URLSearchParams(window.location.search);
-      const eventId = params.get("event") || "event-unknown";
-
-      try {
-        await addDoc(collection(db, "events", eventId, "attendees"), {
-          company, name, size, timestamp: serverTimestamp(),
-        });
-        alert("✅ 登録が完了しました。");
-      } catch (err) {
-        console.error(err);
-        alert("⚠️ 登録エラー: " + err.message);
-      }
+        try {
+          await addDoc(collection(db, "attendees"), {
+            company,
+            name,
+            size,
+            event,
+            timestamp: serverTimestamp()
+          });
+          alert("登録完了しました！");
+          form.reset();
+        } catch (err) {
+          alert("⚠️ 登録エラー: " + err.message);
+          console.error(err);
+        }
+      });
+    })
+    .catch(err => {
+      console.error("config.json 読み込みエラー:", err);
     });
-  }
 </script>
+
+</body></html>
