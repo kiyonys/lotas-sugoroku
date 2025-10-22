@@ -4,32 +4,6 @@
 <link rel="stylesheet" href="assets/css/app.css"/>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
-<script>
-// 1回だけ: GitHub Pages上の config.json を読んで保存 → 画面を更新
-(async () => {
-  try {
-    // すでに設定済みなら何もしない（無限リロード防止）
-    if (localStorage.getItem('lotus_firebase_cfg')) return;
-
-    const CONFIG_URL = 'https://kiyonys.github.io/lotas-sugoroku/config.json';
-    const res = await fetch(CONFIG_URL, { cache: 'no-store' });
-    if (!res.ok) throw new Error('fetch failed: ' + res.status);
-    const cfg = await res.json();
-
-    // 簡易バリデーション
-    if (!cfg.apiKey || !cfg.projectId) throw new Error('invalid config.json');
-
-    // 保存（講師・参加者で共通のキー名）
-    localStorage.setItem('lotus_firebase_cfg', JSON.stringify(cfg));
-
-    // 画面を更新（右上の表示が「設定済」になる）
-    location.reload();
-  } catch (e) {
-    console.error('config setup error:', e);
-    alert('設定ファイルの読込みに失敗しました: ' + e.message);
-  }
-})();
-</script>
 </head>
 <body data-page="lecturer">
 <div class="wrap">
@@ -39,9 +13,6 @@
         <h2>参加者QR</h2><span class="badge" id="badge">未設定</span>
       </div>
       <div id="qr" class="qr-box">QR</div>
-      const d = new Date();
-const eventKey = `event-${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-
       <div class="grid-2" style="margin-top:12px">
         <button class="btn accent" id="btnOpenAttendee">参加者ページを開く</button>
         <button class="btn" id="btnEnding">エンディングへ</button>
@@ -59,76 +30,37 @@ const eventKey = `event-${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'
   </div>
   <div class="footer">© Lotus Workshop</div>
 </div>
-  <!-- Firebase 共通ローダー（config.json を取りにいき、初期化する） -->
-<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-database-compat.js"></script>
-<script>
-(async () => {
-  try {
-    // 1) config.json を Pages から取得（キャッシュ無効）
-    const CONFIG_URL = 'https://kiyonys.github.io/lotas-sugoroku/config.json';
-    const res = await fetch(CONFIG_URL, { cache: 'no-store' });
-    if (!res.ok) throw new Error('fetch failed: ' + res.status);
-    const cfg = await res.json();
+<script src="assets/js/app.js"></script>
+<!-- Firebase & Firestore SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-    // 2) LocalStorage に保存（参加者ページでも使う）
-    localStorage.setItem('lotus_firebase_cfg', JSON.stringify(cfg));
+// Firebase設定を読み込み
+fetch("https://kiyonys.github.io/lotas-sugoroku/config.json")
+  .then(r => r.json())
+  .then(config => {
+    const app = initializeApp(config);
+    const db = getFirestore(app);
 
-    // 3) Firebase 初期化（Realtime Database）
-    if (!firebase.apps.length) firebase.initializeApp(cfg);
-    window.rtdb = firebase.database();
+    // 👇 attendeesコレクションをリアルタイム監視
+    const logBox = document.querySelector(".log") || document.getElementById("log");
+    const q = collection(db, "attendees");
 
-    // 4) eventキー（?event=... があれば保存）
-    const p = new URL(location.href).searchParams.get('event');
-    if (p) localStorage.setItem('eventKey', p);
-    window.EVENT_KEY = localStorage.getItem('eventKey') || p || '';
-
-    // 5) 画面のバッジ/イベント表示を更新（要素がある時だけ）
-    const badge = document.getElementById('badge');
-    if (badge) badge.textContent = '設定済';
-    const ev = document.getElementById('eventKey');
-    if (ev && window.EVENT_KEY) ev.textContent = window.EVENT_KEY;
-  } catch (e) {
-    console.error(e);
-    alert('設定ファイルの読み込みに失敗しました：' + e.message);
-  }
-})();
-</script>
-<script>
-  // ---- JSTで今日の日付を event-YYYY-MM-DD にする（?event= があればそれを優先）
-  function formatDateJST(d = new Date()) {
-    const jst = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
-    const y = jst.getFullYear();
-    const m = String(jst.getMonth() + 1).padStart(2, '0');
-    const day = String(jst.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  }
-
-  // 1) URLに ?event= があれば優先、無ければ今日のキー
-  const params = new URLSearchParams(location.search);
-  const eventKey = params.get('event') || `event-${formatDateJST()}`;
-
-  // 2) 参加者用の公開URL（HTTPS固定）
-  const attendeeUrl = `https://kiyonys.github.io/lotas-sugoroku/attendee.html?event=${encodeURIComponent(eventKey)}`;
-
-  // 3) QRコード生成APIに渡す
-  const qrApi = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=';
-  const qrUrl = qrApi + encodeURIComponent(attendeeUrl);
-
-  // 4) 画面にQRを表示
-  const qrDiv = document.getElementById('qr');
-  if (qrDiv) {
-    qrDiv.innerHTML = `<img src="${qrUrl}" alt="QR" style="border-radius:8px;">`;
-  }
-
-  // 5) eventキーを表示
-  const ev = document.getElementById('eventKey');
-  if (ev) ev.textContent = eventKey;
-
-  // 6) 「参加者ページを開く」ボタン（任意）
-  const openBtn = document.getElementById('openAttendee');
-  if (openBtn) openBtn.onclick = () => window.open(attendeeUrl, '_blank');
+    onSnapshot(q, (snapshot) => {
+      let html = "";
+      snapshot.forEach((doc) => {
+        const d = doc.data();
+        html += `
+          <div style="padding:4px 0;border-bottom:1px solid #334;">
+            <span style="color:#7ff;">チーム${d.team}</span>：
+            ${d.company}（${d.size}人）<br>
+            <small style="opacity:.7;">${d.name}</small>
+          </div>`;
+      });
+      if (logBox) logBox.innerHTML = html || "まだ参加者はいません。";
+    });
+  });
 </script>
 
 </body></html>
-
