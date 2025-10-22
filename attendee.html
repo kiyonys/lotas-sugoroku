@@ -2,8 +2,6 @@
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>最強経営スゴロク｜参加者</title>
 <link rel="stylesheet" href="assets/css/app.css"/>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 </head>
 <body data-page="attendee">
 <div class="wrap">
@@ -25,7 +23,16 @@
         <button class="btn" type="button" id="saveCfgLite">Firebase設定</button>
       </div>
     </form>
-    <p class="thanks" style="display:none;margin-top:10px">送信しました、ありがとうございます！</p>
+<!-- 送信後の完了表示 -->
+<div id="done" style="display:none; text-align:center; padding:24px 16px;">
+  <h2 style="font-size:22px; margin:0 0 8px; letter-spacing:.02em;">
+    スゴロクゲームへのエントリー完了！
+  </h2>
+  <p style="margin:0; opacity:.9;">
+    端末から手を放し、スタートするまでお待ちください。
+  </p>
+</div>
+
     <p class="small" style="margin-top:10px">※ 参加情報は会場画面に会社名・氏名は表示されません（個社特定なし）。</p>
   </div>
 </div>
@@ -49,26 +56,84 @@
         const name = form.name.value;
         const size = form.size.value;
         const event = `event-${new Date().toISOString().slice(0,10)}`;
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
 
-        try {
-          await addDoc(collection(db, "attendees"), {
-            company,
-            name,
-            size,
-            event,
-            timestamp: serverTimestamp()
-          });
-          alert("登録完了しました！");
-          form.reset();
-        } catch (err) {
-          alert("⚠️ 登録エラー: " + err.message);
-          console.error(err);
-        }
-      });
-    })
+  const company = form.company.value;
+  const name    = form.name.value;
+  const size    = form.size.value;
+  const event   = `event-${new Date().toISOString().slice(0,10)}`;
+
+  // 送信ボタンの無効化（連打防止）
+  const submitBtn = form.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = '送信中…';
+
+  try {
+    await addDoc(collection(db, 'attendees'), {
+      company, name, size, event,
+      timestamp: serverTimestamp()
+    });
+
+    // ✅ 成功：フォームを隠して完了メッセージだけ表示
+    form.style.display = 'none';
+    const smallNote = document.querySelector('.small');
+    if (smallNote) smallNote.style.display = 'none';
+
+    const done = document.getElementById('done');
+    done.style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' }); // 上に寄せて見せやすく
+  } catch (err) {
+    alert('⚠️ 登録エラー: ' + err.message);
+    console.error(err);
+    // 失敗時は元に戻す
+    submitBtn.disabled = false;
+    submitBtn.textContent = '参加する';
+  }
+});
+
+          })
     .catch(err => {
       console.error("config.json 読み込みエラー:", err);
     });
+</script>
+<script type="module">
+  // 1) Firebase SDK (modular) をCDNから読み込み
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+  import { getFirestore, collection, addDoc, serverTimestamp } 
+    from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+  // 2) 公開中の設定ファイルを取得（GitHub Pages 上）
+  const res = await fetch("https://kiyonys.github.io/lotas-sugoroku/config.json", { cache: "no-store" });
+  if (!res.ok) throw new Error("config fetch failed: " + res.status);
+  const firebaseConfig = await res.json();
+
+  // 3) 初期化
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  // 4) フォーム送信 → Firestore へ追加
+  const form = document.getElementById("entryForm");
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const company = form.company.value.trim();
+    const name    = form.name.value.trim();
+    const size    = form.size.value;
+    const event   = `event-${new Date().toISOString().slice(0,10)}`;
+
+    try {
+      await addDoc(collection(db, "attendees"), {
+        company, name, size, event,
+        timestamp: serverTimestamp()
+      });
+      alert("✅ 登録しました！");
+      form.reset();
+    } catch (err) {
+      console.error(err);
+      alert("⚠️ 登録エラー: " + err.message);
+    }
+  });
 </script>
 
 </body></html>
