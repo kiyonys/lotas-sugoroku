@@ -97,43 +97,6 @@ form.addEventListener('submit', async (e) => {
       console.error("config.json 読み込みエラー:", err);
     });
 </script>
-<script type="module">
-  // 1) Firebase SDK (modular) をCDNから読み込み
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-  import { getFirestore, collection, addDoc, serverTimestamp } 
-    from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-  // 2) 公開中の設定ファイルを取得（GitHub Pages 上）
-  const res = await fetch("https://kiyonys.github.io/lotas-sugoroku/config.json", { cache: "no-store" });
-  if (!res.ok) throw new Error("config fetch failed: " + res.status);
-  const firebaseConfig = await res.json();
-
-  // 3) 初期化
-  const app = initializeApp(firebaseConfig);
-  const db  = getFirestore(app);
-
-  // 4) フォーム送信 → Firestore へ追加
-  const form = document.getElementById("entryForm");
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const company = form.company.value.trim();
-    const name    = form.name.value.trim();
-    const size    = form.size.value;
-    const event   = `event-${new Date().toISOString().slice(0,10)}`;
-
-    try {
-      await addDoc(collection(db, "attendees"), {
-        company, name, size, event,
-        timestamp: serverTimestamp()
-      });
-      alert("✅ 登録しました！");
-      form.reset();
-    } catch (err) {
-      console.error(err);
-      alert("⚠️ 登録エラー: " + err.message);
-    }
-  });
-</script>
 
 </body></html>
