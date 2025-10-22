@@ -41,55 +41,70 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
   import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-  // 🔹 config.json から設定を取得
-  fetch('https://kiyonys.github.io/lotas-sugoroku/config.json')
-    .then(response => response.json())
-    .then(async config => {
+  // config.json から設定を取得
+  fetch("https://kiyonyS.github.io/lotas-sugoroku/config.json")
+    .then((response) => response.json())
+    .then(async (config) => {
       const app = initializeApp(config);
-      const db = getFirestore(app);
+      const db  = getFirestore(app);
 
-      // 🔹 フォーム送信イベント
+      // ✅ 追加：size から team を決める関数
+      function sizeToTeam(size) {
+        // "1-4" "5-9" "10-19" "20-49" "50-99" "100+" などを想定
+        if (size.includes('+')) return 'D'; // 100+ → D
+        const head = parseInt(size.split('-')[0], 10); // "10-19" → 10
+        if (head <= 9)  return 'A';   // 1-9 人
+        if (head <= 19) return 'B';   // 10-19 人
+        if (head <= 49) return 'C';   // 20-49 人
+        return 'D';                   // 50 以上
+      }
+
+      // フォーム送信イベント
       const form = document.getElementById('entryForm');
       form.addEventListener('submit', async (e) => {
-  e.preventDefault();
+        e.preventDefault();
 
-  const company = form.company.value;
-  const name    = form.name.value;
-  const size    = form.size.value;
-  const event   = `event-${new Date().toISOString().slice(0,10)}`;
+        const company = form.company.value.trim();
+        const name    = form.name.value.trim();
+        const size    = form.size.value;
+        const event   = `event-${new Date().toISOString().slice(0,10)}`;
 
-  // 送信ボタンの無効化（連打防止）
-  const submitBtn = form.querySelector('button[type="submit"]');
-  submitBtn.disabled = true;
-  submitBtn.textContent = '送信中…';
+        // ✅ 追加：team と served を用意
+        const team   = sizeToTeam(size);
+        const served = false;
 
-  try {
-    await addDoc(collection(db, 'attendees'), {
-      company, name, size, event,
-      timestamp: serverTimestamp()
-    });
+        // 送信ボタンの無効化（連打防止）
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = '送信中…';
 
-    // ✅ 成功：フォームを隠して完了メッセージだけ表示
-    form.style.display = 'none';
-    const smallNote = document.querySelector('.small');
-    if (smallNote) smallNote.style.display = 'none';
+        try {
+          await addDoc(collection(db, 'attendees'), {
+            company, name, size, team, served, event,
+            timestamp: serverTimestamp(),
+          });
 
-    const done = document.getElementById('done');
-    done.style.display = 'block';
-    window.scrollTo({ top: 0, behavior: 'smooth' }); // 上に寄せて見せやすく
-  } catch (err) {
-    alert('⚠️ 登録エラー: ' + err.message);
-    console.error(err);
-    // 失敗時は元に戻す
-    submitBtn.disabled = false;
-    submitBtn.textContent = '参加する';
-  }
-});
+          // 成功：フォームを隠して完了メッセージだけ表示
+          form.style.display = 'none';
+          const smallNote = document.querySelector('.small');
+          if (smallNote) smallNote.style.display = 'none';
 
-          })
+          const done = document.getElementById('done');
+          done.style.display = 'block';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (err) {
+          alert('⚠️ 登録エラー: ' + err.message);
+          console.error(err);
+          // 失敗時は元に戻す
+          submitBtn.disabled = false;
+          submitBtn.textContent = '参加する';
+        }
+      });
+    })
     .catch(err => {
-      console.error("config.json 読み込みエラー:", err);
+      console.error('config.json 読み込みエラー:', err);
     });
 </script>
+
 
 </body></html>
