@@ -39,21 +39,22 @@ let eventKey =
   params.get('event') ||
   localStorage.getItem('eventKey') ||
   `event-${new Date().toISOString().slice(0,10)}`;
-
-// 以後のページでも同じ値を使えるよう保存
 localStorage.setItem('eventKey', eventKey);
 
-// 画面のバッジ更新（表示箇所があれば）
-const badge = document.getElementById('badge');
-const eventKeySpan = document.getElementById('eventKey');
-if (badge) badge.textContent = eventKey;
-if (eventKeySpan) eventKeySpan.textContent = eventKey;
+// DOM が読み込み終わってから表示更新
+document.addEventListener("DOMContentLoaded", () => {
+  const badge = document.getElementById('badge');
+  const eventKeySpan = document.getElementById('eventKey');
+  if (badge) badge.textContent = eventKey;
+  if (eventKeySpan) eventKeySpan.textContent = eventKey;
+});
 
 // === 参加者ページURL（クエリ付き）===
 const attendeeUrl = (() => {
   const base = location.href.replace(/index\.html(?:\?.*)?$/, '');
   return `${base}attendee.html?event=${encodeURIComponent(eventKey)}`;
 })();
+
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
