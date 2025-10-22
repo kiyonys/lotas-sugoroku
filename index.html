@@ -37,6 +37,28 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/fireba
 import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 // Firebase設定を読み込み
+// === QR描画 & 参加者ページURL ===
+const attendeeUrl = (() => {
+  // 例: https://kiyonyS.github.io/lotas-sugoroku/attendee.html
+  const base = location.href.replace(/index\.html(?:\?.*)?$/, "");
+  return base + "attendee.html";
+})();
+
+// QRコード生成（#qr に描画）
+if (window.QRCode) {
+  new QRCode(document.getElementById("qr"), {
+    text: attendeeUrl,
+    width: 240,
+    height: 240,
+    correctLevel: QRCode.CorrectLevel.M,
+  });
+}
+
+// 「参加者ページを開く」ボタンでも同じURLを開く
+document.getElementById("btnOpenAttendee")?.addEventListener("click", () => {
+  window.open(attendeeUrl, "_blank");
+});
+
 fetch("https://kiyonys.github.io/lotas-sugoroku/config.json")
   .then(r => r.json())
   .then(config => {
@@ -62,5 +84,6 @@ fetch("https://kiyonys.github.io/lotas-sugoroku/config.json")
     });
   });
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 </body></html>
