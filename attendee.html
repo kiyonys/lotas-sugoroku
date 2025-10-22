@@ -51,12 +51,6 @@
       // 🔹 フォーム送信イベント
       const form = document.getElementById('entryForm');
       form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const company = form.company.value;
-        const name = form.name.value;
-        const size = form.size.value;
-        const event = `event-${new Date().toISOString().slice(0,10)}`;
-form.addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const company = form.company.value;
