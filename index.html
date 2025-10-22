@@ -33,6 +33,28 @@
 <script src="assets/js/app.js"></script>
 <!-- Firebase & Firestore SDK -->
 <script type="module">
+// === eventKey を自動決定（URL > localStorage > 今日の日付）===
+const params = new URLSearchParams(location.search);
+let eventKey =
+  params.get('event') ||
+  localStorage.getItem('eventKey') ||
+  `event-${new Date().toISOString().slice(0,10)}`;
+
+// 以後のページでも同じ値を使えるよう保存
+localStorage.setItem('eventKey', eventKey);
+
+// 画面のバッジ更新（表示箇所があれば）
+const badge = document.getElementById('badge');
+const eventKeySpan = document.getElementById('eventKey');
+if (badge) badge.textContent = eventKey;
+if (eventKeySpan) eventKeySpan.textContent = eventKey;
+
+// === 参加者ページURL（クエリ付き）===
+const attendeeUrl = (() => {
+  const base = location.href.replace(/index\.html(?:\?.*)?$/, '');
+  return `${base}attendee.html?event=${encodeURIComponent(eventKey)}`;
+})();
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
@@ -84,6 +106,60 @@ fetch("https://kiyonys.github.io/lotas-sugoroku/config.json")
     });
   });
 </script>
+<!-- ① head か body 終了直前に追加：QRCode ライブラリ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+
+<!-- ② あなたのモジュールスクリプトはこの後に置く（順序が大事） -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+  import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+  // === 参加者ページのURL ===
+  const attendeeUrl = (() => {
+    const base = location.href.replace(/index\.html(?:\?.*)?$/, "");
+    return base + "attendee.html";
+  })();
+
+  // === QR 描画 ===
+  window.addEventListener("DOMContentLoaded", () => {
+    const qrDiv = document.getElementById("qr");
+    if (qrDiv && window.QRCode) {
+      new QRCode(qrDiv, {
+        text: attendeeUrl,
+        width: 240,
+        height: 240,
+        correctLevel: QRCode.CorrectLevel.M,
+      });
+    }
+    // ボタンも同じURLで開く
+    const btn = document.getElementById("btnOpenAttendee");
+    if (btn) btn.addEventListener("click", () => window.open(attendeeUrl, "_blank"));
+  });
+
+  // === Firestore 読み込み・進行ログ ===
+  fetch("https://kiyonyS.github.io/lotas-sugoroku/config.json")
+    .then(r => r.json())
+    .then(config => {
+      const app = initializeApp(config);
+      const db  = getFirestore(app);
+      const logBox = document.querySelector(".log") || document.getElementById("log");
+      const q = collection(db, "attendees");
+      onSnapshot(q, (snapshot) => {
+        let html = "";
+        snapshot.forEach((doc) => {
+          const d = doc.data();
+          html += `
+            <div style="padding:4px 0;border-bottom:1px solid #334;">
+              <span style="color:#7ff;">チーム${d.team}</span>：
+              ${d.company}（${d.size}人）<br>
+              <small style="opacity:.7;">${d.name}</small>
+            </div>`;
+        });
+        if (logBox) logBox.innerHTML = html || "まだ参加者はいません。";
+      });
+    });
+</script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 </body></html>

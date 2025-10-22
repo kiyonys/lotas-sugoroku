@@ -67,7 +67,10 @@
         const company = form.company.value.trim();
         const name    = form.name.value.trim();
         const size    = form.size.value;
-        const event   = `event-${new Date().toISOString().slice(0,10)}`;
+        // 受け取り：?event=... があればそれを採用、なければ今日の日付
+const eventParam = new URLSearchParams(location.search).get('event');
+const event = eventParam || `event-${new Date().toISOString().slice(0,10)}`;
+
 
         // ✅ 追加：team と served を用意
         const team   = sizeToTeam(size);
