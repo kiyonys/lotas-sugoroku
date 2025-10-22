@@ -82,8 +82,12 @@ const event = eventParam || `event-${new Date().toISOString().slice(0,10)}`;
         submitBtn.textContent = '送信中…';
 
         try {
-          await addDoc(collection(db, 'attendees'), {
+      const now = new Date();
+const joinedAt = now.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+    
+await addDoc(collection(db, 'attendees'), {
             company, name, size, team, served, event,
+joinedAt,
             timestamp: serverTimestamp(),
           });
 
